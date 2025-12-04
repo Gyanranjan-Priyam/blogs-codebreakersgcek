@@ -127,6 +127,8 @@ export async function POST(request: NextRequest) {
       const bucketName = env.NEXT_PUBLIC_S3_BUCKET_NAME_IMAGES;
 
       try {
+        console.log('Uploading to S3:', { bucket: bucketName, key: fileName });
+        
         const uploadParams = {
           Bucket: bucketName,
           Key: fileName,
@@ -143,16 +145,27 @@ export async function POST(request: NextRequest) {
         const command = new PutObjectCommand(uploadParams);
         await S3.send(command);
 
+        console.log('S3 upload successful:', fileName);
+
         return NextResponse.json({
           success: true,
           key: fileName,
           url: `https://${bucketName}.t3.storage.dev/${fileName}`,
           message: 'Blog image uploaded successfully',
         });
-      } catch (s3Error) {
-        console.error('S3 upload error:', s3Error);
+      } catch (s3Error: any) {
+        console.error('S3 upload error:', {
+          message: s3Error?.message,
+          code: s3Error?.code,
+          name: s3Error?.name,
+          bucket: bucketName,
+          endpoint: env.AWS_ENDPOINT_URL_S3,
+        });
         return NextResponse.json(
-          { error: 'Failed to upload to cloud storage' },
+          { 
+            error: 'Failed to upload to cloud storage',
+            details: s3Error?.message || 'Unknown error'
+          },
           { status: 500 }
         );
       }

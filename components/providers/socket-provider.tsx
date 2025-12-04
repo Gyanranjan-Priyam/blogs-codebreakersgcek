@@ -20,8 +20,18 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Connect to Socket.IO server
-    const socketInstance = io(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000", {
+    // Socket.IO is currently disabled as it's not being used in the application
+    // Uncomment below to enable real-time features
+    
+    /*
+    const socketUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    
+    if (!socketUrl) {
+      console.warn('Socket.IO: No valid URL found, skipping connection');
+      return;
+    }
+
+    const socketInstance = io(socketUrl, {
       path: "/api/socketio",
       addTrailingSlash: false,
     });
@@ -41,6 +51,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     return () => {
       socketInstance.disconnect();
     };
+    */
   }, []);
 
   return (
