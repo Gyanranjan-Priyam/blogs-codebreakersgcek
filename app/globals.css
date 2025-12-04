@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -322,20 +323,64 @@
 }
 
 /* Rich Text Editor Font Families */
-.tiptap [style*="font-family: monospace"] {
+/* More robust selectors that work across all browsers including mobile */
+.tiptap [style*="font-family"] span,
+.tiptap [style*="font-family"],
+.tiptap p[style*="font-family"],
+.tiptap h1[style*="font-family"],
+.tiptap h2[style*="font-family"],
+.tiptap h3[style*="font-family"],
+.tiptap h4[style*="font-family"],
+.tiptap h5[style*="font-family"],
+.tiptap h6[style*="font-family"] {
+  /* Preserve the inline font-family from TipTap */
+}
+
+/* Monospace font - with and without spaces around colon */
+.tiptap [style*="font-family: monospace"],
+.tiptap [style*='font-family: monospace'],
+.tiptap [style*="font-family:monospace"],
+.tiptap span[style*="font-family: monospace"],
+.tiptap p span[style*="font-family: monospace"] {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
 }
 
-.tiptap [style*="font-family: Inter"] {
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+/* Inter font - with and without spaces */
+.tiptap [style*="font-family: Inter"],
+.tiptap [style*='font-family: Inter'],
+.tiptap [style*="font-family:Inter"],
+.tiptap span[style*="font-family: Inter"],
+.tiptap p span[style*="font-family: Inter"] {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.tiptap [style*="font-family: Comic Sans MS"] {
-  font-family: "Comic Sans MS", "Comic Sans", cursive !important;
+/* Comic Sans MS - multiple variations */
+.tiptap [style*="font-family: Comic Sans MS"],
+.tiptap [style*='font-family: Comic Sans MS'],
+.tiptap [style*="font-family:Comic Sans MS"],
+.tiptap [style*="font-family: comic sans ms"],
+.tiptap span[style*="font-family: Comic Sans MS"],
+.tiptap p span[style*="font-family: Comic Sans MS"] {
+  font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", "Comic Neue", cursive !important;
 }
 
-.tiptap [style*="font-family: serif"] {
+/* Serif font - with and without spaces */
+.tiptap [style*="font-family: serif"],
+.tiptap [style*='font-family: serif'],
+.tiptap [style*="font-family:serif"],
+.tiptap span[style*="font-family: serif"],
+.tiptap p span[style*="font-family: serif"] {
   font-family: Georgia, Cambria, "Times New Roman", Times, serif !important;
+}
+
+/* Ensure fonts load on mobile devices */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific */
+  .tiptap [style*="Inter"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  }
 }
 
 /* Rich Text Editor Placeholder */
