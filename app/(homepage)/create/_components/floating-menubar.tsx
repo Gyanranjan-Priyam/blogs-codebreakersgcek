@@ -7,6 +7,8 @@ import {
   Image as ImageIcon,
   Video,
   FileText,
+  Table,
+  Code,
 } from "lucide-react";
 import {
   Tooltip,
@@ -17,14 +19,14 @@ import {
 import { cn } from "@/lib/utils";
 
 interface FloatingMenubarProps {
-  onInsert: (component: "richtext" | "imagetext" | "imageuploader" | "videoplayer") => void;
+  onInsert: (component: "richtext" | "imagetext" | "imageuploader" | "videoplayer" | "table" | "code") => void;
   className?: string;
 }
 
 export function FloatingMenubar({ onInsert, className }: FloatingMenubarProps) {
   const [activeComponent, setActiveComponent] = useState<string | null>(null);
 
-  const handleInsert = (component: "richtext" | "imagetext" | "imageuploader" | "videoplayer") => {
+  const handleInsert = (component: "richtext" | "imagetext" | "imageuploader" | "videoplayer" | "table" | "code") => {
     setActiveComponent(component);
     onInsert(component);
   };
@@ -53,6 +55,18 @@ export function FloatingMenubar({ onInsert, className }: FloatingMenubarProps) {
       icon: Video,
       label: "Video Player",
       description: "Embed YouTube, Drive, or Cloudinary videos",
+    },
+    {
+      id: "table",
+      icon: Table,
+      label: "Table",
+      description: "Create and edit tables with rows and columns",
+    },
+    {
+      id: "code",
+      icon: Code,
+      label: "Code Block",
+      description: "Add syntax-highlighted code snippets",
     },
   ];
 

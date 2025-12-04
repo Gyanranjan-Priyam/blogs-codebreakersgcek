@@ -6,14 +6,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, ArrowLeft } from "lucide-react";
+import { X, Plus, ArrowLeft, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { ThumbnailUploader } from "../../create/_components/thumbnail-uploader";
 import { RichTextEditor } from "../../create/_components/rich-text-editor";
 import { ImageText } from "../../create/_components/image-text";
 import { ContentImageUploader } from "../../create/_components/content-image-uploader";
 import { VideoPlayer } from "../../create/_components/video-player";
+import { TableEditor } from "../../create/_components/table-editor";
+import { CodeEditor } from "../../create/_components/code-editor";
+import { FloatingMenubar } from "../../create/_components/floating-menubar";
 import Link from "next/link";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface BlogComponent {
   id: string;
@@ -45,6 +65,81 @@ interface Blog {
 
 interface EditBlogClientProps {
   blog: Blog;
+}
+
+interface SortableItemProps {
+  component: BlogComponent;
+  index: number;
+  onUpdate: (index: number, updates: Partial<BlogComponent>) => void;
+  onDelete: (index: number) => void;
+  renderContent: (component: BlogComponent, index: number) => React.ReactNode;
+}
+
+function SortableItem({ component, index, onUpdate, onDelete, renderContent }: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: component.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const getComponentLabel = (type: string) => {
+    switch (type) {
+      case "richtext": return "Rich Text";
+      case "imagetext": return "Image with Text";
+      case "imageuploader": return "Image";
+      case "videoplayer": return "Video";
+      case "table": return "Table";
+      case "code": return "Code Block";
+      default: return "";
+    }
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="relative border rounded-lg group hover:border-primary transition-colors bg-background"
+    >
+      {/* Drag Handle - Top Bar */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30 rounded-t-lg">
+        <div
+          {...attributes}
+          {...listeners}
+          className="flex items-center gap-2 flex-1 cursor-grab active:cursor-grabbing"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground">
+            {getComponentLabel(component.type)}
+          </span>
+        </div>
+        
+        {/* Remove Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 hover:bg-destructive hover:text-destructive-foreground"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(index);
+          }}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Component Content */}
+      <div className="p-4">{renderContent(component, index)}</div>
+    </div>
+  );
 }
 
 export default function EditBlogClient({ blog }: EditBlogClientProps) {
@@ -96,6 +191,25 @@ export default function EditBlogClient({ blog }: EditBlogClientProps) {
     updated[index] = { ...updated[index], ...updates };
     setComponents(updated);
   };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setComponents((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleDeleteComponent = async (index: number) => {
     const component = components[index];
@@ -294,104 +408,123 @@ export default function EditBlogClient({ blog }: EditBlogClientProps) {
         <div className="space-y-6 mb-8">
           <Label className="text-lg font-semibold">Blog Content</Label>
           
-          {components.map((component, index) => (
-            <div key={component.id} className="border border-border rounded-lg p-4">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-sm font-medium text-muted-foreground">
-                  {component.type === "richtext" && "Rich Text"}
-                  {component.type === "imagetext" && "Image with Text"}
-                  {component.type === "imageuploader" && "Image"}
-                  {component.type === "videoplayer" && "Video"}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDeleteComponent(index)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {component.type === "richtext" && (
-                <RichTextEditor
-                  content={JSON.stringify(component.content)}
-                  onChange={(content: string) => {
-                    try {
-                      const parsed = JSON.parse(content);
-                      handleUpdateComponent(index, { content: parsed });
-                    } catch {
-                      handleUpdateComponent(index, { content });
+          <DndContext
+            sensors={sensors}
+            onDragEnd={handleDragEnd}
+            collisionDetection={closestCenter}
+          >
+            <SortableContext
+              items={components.map((c) => c.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {components.map((component, index) => (
+                <SortableItem
+                  key={component.id}
+                  component={component}
+                  index={index}
+                  onUpdate={handleUpdateComponent}
+                  onDelete={handleDeleteComponent}
+                  renderContent={(comp, idx) => {
+                    if (comp.type === "richtext") {
+                      return (
+                        <RichTextEditor
+                          content={JSON.stringify(comp.content)}
+                          onChange={(content: string) => {
+                            try {
+                              const parsed = JSON.parse(content);
+                              handleUpdateComponent(idx, { content: parsed });
+                            } catch {
+                              handleUpdateComponent(idx, { content });
+                            }
+                          }}
+                        />
+                      );
                     }
+
+                    if (comp.type === "imagetext") {
+                      return (
+                        <ImageText
+                          onContentChange={(data: any) => {
+                            handleUpdateComponent(idx, {
+                              text: data.text,
+                              imageKey: data.imageKey,
+                              alignment: data.alignment
+                            });
+                          }}
+                          initialData={{
+                            text: comp.text || "",
+                            imageKey: comp.imageKey || undefined,
+                            image: comp.imageKey ? `https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME_IMAGES}.t3.storage.dev/${comp.imageKey}` : undefined,
+                            alignment: (comp.alignment as "left" | "right") || "left"
+                          }}
+                        />
+                      );
+                    }
+
+                    if (comp.type === "imageuploader") {
+                      return (
+                        <ContentImageUploader
+                          onImageUpload={(imageKey: string) => handleUpdateComponent(idx, { imageKey })}
+                          initialData={{
+                            key: comp.imageKey || undefined,
+                            url: comp.imageKey ? `https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME_IMAGES}.t3.storage.dev/${comp.imageKey}` : undefined
+                          }}
+                        />
+                      );
+                    }
+
+                    if (comp.type === "videoplayer") {
+                      return (
+                        <VideoPlayer
+                          onVideoLoad={(url: string, type: string) => {
+                            handleUpdateComponent(idx, {
+                              videoUrl: url,
+                              videoType: type
+                            });
+                          }}
+                          initialData={{
+                            url: comp.videoUrl || "",
+                            type: comp.videoType || "youtube"
+                          }}
+                        />
+                      );
+                    }
+
+                    if (comp.type === "table") {
+                      return (
+                        <TableEditor
+                          initialData={comp.content as any}
+                          onChange={(data: any) => {
+                            handleUpdateComponent(idx, { content: data });
+                          }}
+                        />
+                      );
+                    }
+
+                    if (comp.type === "code") {
+                      return (
+                        <CodeEditor
+                          initialData={comp.content as any}
+                          onChange={(data: any) => {
+                            handleUpdateComponent(idx, { content: data });
+                          }}
+                        />
+                      );
+                    }
+
+                    return null;
                   }}
                 />
-              )}
-
-              {component.type === "imagetext" && (
-                <ImageText
-                  onContentChange={(data: any) => {
-                    handleUpdateComponent(index, {
-                      text: data.text,
-                      imageKey: data.imageKey,
-                      alignment: data.alignment
-                    });
-                  }}
-                  initialData={{
-                    text: component.text || "",
-                    imageKey: component.imageKey || undefined,
-                    image: component.imageKey ? `https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME_IMAGES}.t3.storage.dev/${component.imageKey}` : undefined,
-                    alignment: (component.alignment as "left" | "right") || "left"
-                  }}
-                />
-              )}
-
-              {component.type === "imageuploader" && (
-                <ContentImageUploader
-                  onImageUpload={(imageKey: string) => handleUpdateComponent(index, { imageKey })}
-                  initialData={{
-                    key: component.imageKey || undefined,
-                    url: component.imageKey ? `https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME_IMAGES}.t3.storage.dev/${component.imageKey}` : undefined
-                  }}
-                />
-              )}
-
-              {component.type === "videoplayer" && (
-                <VideoPlayer
-                  onVideoLoad={(url: string, type: string) => {
-                    handleUpdateComponent(index, {
-                      videoUrl: url,
-                      videoType: type
-                    });
-                  }}
-                  initialData={{
-                    url: component.videoUrl || "",
-                    type: component.videoType || "youtube"
-                  }}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Add Component Buttons */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          <Button variant="outline" onClick={() => handleAddComponent("richtext")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Rich Text
-          </Button>
-          <Button variant="outline" onClick={() => handleAddComponent("imagetext")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Image with Text
-          </Button>
-          <Button variant="outline" onClick={() => handleAddComponent("imageuploader")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Image
-          </Button>
-          <Button variant="outline" onClick={() => handleAddComponent("videoplayer")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Video
-          </Button>
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
+
+      {/* Floating Menubar */}
+      <FloatingMenubar
+        onInsert={(type) => handleAddComponent(type)}
+      />
     </div>
   );
 }

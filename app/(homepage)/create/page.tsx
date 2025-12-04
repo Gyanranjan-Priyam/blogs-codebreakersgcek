@@ -7,6 +7,10 @@ import { ImageText } from "./_components/image-text";
 import { ThumbnailUploader } from "./_components/thumbnail-uploader";
 import { ContentImageUploader } from "./_components/content-image-uploader";
 import { VideoPlayer } from "./_components/video-player";
+import { TableEditor } from "./_components/table-editor";
+import { TableRenderer } from "./_components/table-renderer";
+import { CodeEditor } from "./_components/code-editor";
+import { CodeRenderer } from "./_components/code-renderer";
 import { FloatingMenubar } from "./_components/floating-menubar";
 import { CreateHeader } from "./_components/create-header";
 import { Button } from "@/components/ui/button";
@@ -36,7 +40,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-type ComponentType = "richtext" | "imagetext" | "imageuploader" | "videoplayer";
+type ComponentType = "richtext" | "imagetext" | "imageuploader" | "videoplayer" | "table" | "code";
 
 interface ComponentInstance {
   id: string;
@@ -298,6 +302,20 @@ export default function CreateBlogPage() {
             )}
           </div>
         );
+      case "table":
+        return (
+          <TableEditor
+            initialData={componentData[component.id]}
+            onChange={(data) => handleComponentDataChange(component.id, data)}
+          />
+        );
+      case "code":
+        return (
+          <CodeEditor
+            initialData={componentData[component.id]}
+            onChange={(data) => handleComponentDataChange(component.id, data)}
+          />
+        );
       default:
         return null;
     }
@@ -313,6 +331,10 @@ export default function CreateBlogPage() {
         return "Image Uploader";
       case "videoplayer":
         return "Video Player";
+      case "table":
+        return "Table";
+      case "code":
+        return "Code Block";
       default:
         return "";
     }

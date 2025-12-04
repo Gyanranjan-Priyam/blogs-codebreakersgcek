@@ -1,12 +1,14 @@
 "use client";
 
 import { RenderDescription } from "./render-description";
+import { TableRenderer } from "./table-renderer";
+import { CodeRenderer } from "./code-renderer";
 import Image from "next/image";
 import Link from "next/link";
 
 interface ComponentInstance {
   id: string;
-  type: "richtext" | "imagetext" | "imageuploader" | "videoplayer";
+  type: "richtext" | "imagetext" | "imageuploader" | "videoplayer" | "table" | "code";
   data?: any;
 }
 
@@ -103,6 +105,14 @@ export function BlogPreview({
             />
           </div>
         );
+
+      case "table":
+        if (!data) return null;
+        return <TableRenderer data={data} className="my-6" />;
+
+      case "code":
+        if (!data) return null;
+        return <CodeRenderer data={data} className="my-6" />;
 
       default:
         return null;

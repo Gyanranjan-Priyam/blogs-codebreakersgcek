@@ -92,7 +92,7 @@ export default async function BlogDetailPage({ params }: PageProps) {
   // Convert blog components to the format expected by BlogPreview
   const components = blog.components.map((comp) => ({
     id: comp.id,
-    type: comp.type as "richtext" | "imagetext" | "imageuploader" | "videoplayer",
+    type: comp.type as "richtext" | "imagetext" | "imageuploader" | "videoplayer" | "table" | "code",
   }));
 
   const componentData: Record<string, any> = {};
@@ -120,6 +120,12 @@ export default async function BlogDetailPage({ params }: PageProps) {
           url: comp.videoUrl,
           type: comp.videoType,
         };
+        break;
+      case 'table':
+        componentData[comp.id] = comp.content;
+        break;
+      case 'code':
+        componentData[comp.id] = comp.content;
         break;
     }
   });
