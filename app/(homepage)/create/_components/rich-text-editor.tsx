@@ -22,6 +22,8 @@ import {
   X,
   Undo,
   Redo,
+  List,
+  ListOrdered,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -105,7 +107,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[400px] p-4",
+          "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[400px] p-4 prose-ul:list-disc prose-ol:list-decimal prose-li:ml-4",
       },
     },
     onUpdate: ({ editor }) => {
@@ -240,6 +242,25 @@ export function RichTextEditor({
             tooltip="Underline (Ctrl+U)"
           >
             <UnderlineIcon className="h-4 w-4" />
+          </MenuButton>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          {/* Lists */}
+          <MenuButton
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            isActive={editor.isActive("bulletList")}
+            tooltip="Bullet List"
+          >
+            <List className="h-4 w-4" />
+          </MenuButton>
+
+          <MenuButton
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            isActive={editor.isActive("orderedList")}
+            tooltip="Numbered List"
+          >
+            <ListOrdered className="h-4 w-4" />
           </MenuButton>
 
           <div className="w-px h-6 bg-border mx-1" />

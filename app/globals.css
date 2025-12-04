@@ -262,6 +262,42 @@
   padding-left: 1.5rem !important;
 }
 
+/* TipTap Editor List Styles */
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.625rem;
+  margin: 1.25rem 0;
+}
+
+.tiptap ul {
+  list-style-type: disc;
+}
+
+.tiptap ol {
+  list-style-type: decimal;
+}
+
+.tiptap ul ul {
+  list-style-type: circle;
+}
+
+.tiptap ul ul ul {
+  list-style-type: square;
+}
+
+.tiptap li {
+  margin: 0.5rem 0;
+  padding-left: 0.375rem;
+}
+
+.tiptap li > p {
+  margin: 0;
+}
+
+.tiptap li::marker {
+  color: currentColor;
+}
+
 /* Override prose styles that might interfere */
 .prose .tiptap-content ul,
 .prose .tiptap-content ol {
@@ -277,6 +313,11 @@
 /* Dark mode support */
 .dark .tiptap-content ul li::marker,
 .dark .tiptap-content ol li::marker {
+  color: hsl(var(--foreground));
+}
+
+.dark .tiptap ul li::marker,
+.dark .tiptap ol li::marker {
   color: hsl(var(--foreground));
 }
 
