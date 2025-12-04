@@ -1,0 +1,285 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String          @id
+  name            String
+  email           String
+  emailVerified   Boolean         @default(false)
+  image           String?
+  username        String?         @unique
+  bio             String?         @db.Text
+  profileImageKey String?
+  coverImageKey   String?
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  role            String?
+  banned          Boolean?        @default(false)
+  banReason       String?
+  banExpires      DateTime?
+  
+  sessions        Session[]
+  accounts        Account[]
+  tweets          Tweet[]
+  likes           Like[]
+  comments        Comment[]
+  commentLikes    CommentLike[]
+  retweets        Retweet[]
+  followers       Follow[]        @relation("UserFollowers")
+  following       Follow[]        @relation("UserFollowing")
+  blogs           Blog[]
+  blogLikes       BlogLike[]
+  blogComments    BlogComment[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+model Tweet {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  imageKeys   String[]  @default([]) // S3 keys for images
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  isRetweet   Boolean   @default(false)
+  retweetOfId String?
+  retweetOf   Tweet?    @relation("Retweets", fields: [retweetOfId], references: [id], onDelete: Cascade)
+  retweets    Tweet[]   @relation("Retweets")
+  
+  replyToId   String?
+  replyTo     Tweet?    @relation("Replies", fields: [replyToId], references: [id], onDelete: Cascade)
+  replies     Tweet[]   @relation("Replies")
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  likes       Like[]
+  comments    Comment[]
+  retweetedBy Retweet[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([retweetOfId])
+  @@index([replyToId])
+  @@map("tweet")
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  tweetId   String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tweet     Tweet    @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tweetId])
+  @@index([tweetId])
+  @@index([userId])
+  @@map("like")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  userId    String
+  tweetId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tweet     Tweet    @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+  likes     CommentLike[]
+
+  @@index([tweetId])
+  @@index([userId])
+  @@map("comment")
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  userId    String
+  commentId String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@index([commentId])
+  @@index([userId])
+  @@map("comment_like")
+}
+
+model Retweet {
+  id        String   @id @default(cuid())
+  userId    String
+  tweetId   String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tweet     Tweet    @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tweetId])
+  @@index([tweetId])
+  @@index([userId])
+  @@map("retweet")
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  
+  follower    User     @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follow")
+}
+
+model Blog {
+  id               String          @id @default(cuid())
+  title            String
+  slug             String          @unique
+  shortDescription String          @db.Text
+  tags             String[]        @default([])
+  thumbnailKey     String?
+  
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  published        Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  
+  components       BlogComponent[]
+  likes            BlogLike[]
+  comments         BlogComment[]
+
+  @@index([userId])
+  @@index([slug])
+  @@index([published])
+  @@index([createdAt])
+  @@map("blog")
+}
+
+model BlogComponent {
+  id        String   @id @default(cuid())
+  blogId    String
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  
+  type      String   // "richtext" | "imagetext" | "imageuploader" | "videoplayer"
+  order     Int      // Position in the blog for drag-and-drop ordering
+  
+  // Rich text component - stores JSON from Tiptap editor
+  content   Json?    // Tiptap JSON format with formatting, links, alignment, fonts
+  
+  // Image text component
+  text      String?  @db.Text // Text content for image-text component
+  imageKey  String?  // S3 key for image (used in both imagetext and imageuploader)
+  alignment String?  // "left" | "right" - for imagetext component
+  
+  // Video component
+  videoUrl  String?  // Embed URL or direct video link
+  videoType String?  // "youtube" | "drive" | "cloudinary" | "direct"
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([blogId])
+  @@index([order])
+  @@map("blog_component")
+}
+
+model BlogLike {
+  id        String   @id @default(cuid())
+  userId    String
+  blogId    String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, blogId])
+  @@index([blogId])
+  @@index([userId])
+  @@map("blog_like")
+}
+
+model BlogComment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  userId    String
+  blogId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  @@index([blogId])
+  @@index([userId])
+  @@map("blog_comment")
+}

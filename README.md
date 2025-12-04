@@ -1,36 +1,128 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Twitter Clone
+
+A modern Twitter clone built with Next.js 16, featuring authentication, tweets, likes, retweets, and user interactions.
+
+## Features
+
+### ✅ Implemented
+- **Authentication**: User signup, login, and session management using Better Auth
+- **Tweet Creation**: Post tweets up to 280 characters
+- **Like System**: Like and unlike tweets
+- **Retweet System**: Retweet functionality
+- **Follow System**: Follow and unfollow users
+- **Real-time Feed**: View tweets from all users
+- **File Upload**: S3 integration for image uploads (ready to use)
+- **User Profiles**: Basic user profile management
+
+### Database Schema
+
+The application uses PostgreSQL with Prisma ORM. Key models include:
+
+- **User**: Authentication and profile information
+- **Tweet**: Main tweet content with support for replies and retweets
+- **Like**: Tweet likes/favorites
+- **Retweet**: Tweet retweets
+- **Comment**: Tweet replies (can also use Tweet model with replyToId)
+- **Follow**: User follow relationships
+- **Session/Account/Verification**: Authentication models
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18+
+- PostgreSQL database
+- AWS S3 bucket (for image uploads)
 
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Set up environment variables in `.env`:
+```env
+DATABASE_URL="your-postgresql-url"
+AWS_S3_BUCKET_NAME="your-bucket-name"
+AWS_ACCESS_KEY_ID="your-access-key"
+AWS_SECRET_ACCESS_KEY="your-secret-key"
+AWS_REGION="your-region"
+# Add other auth provider credentials as needed
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4. Run database migration:
+```bash
+npx prisma migrate deploy
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+5. Start the development server:
+```bash
+npm run dev
+```
 
-## Learn More
+## API Routes
 
-To learn more about Next.js, take a look at the following resources:
+### Tweets
+- `GET /api/tweets` - Fetch all tweets
+- `POST /api/tweets` - Create a new tweet
+- `DELETE /api/tweets?id={tweetId}` - Delete a tweet
+- `POST /api/tweets/like` - Like/unlike a tweet
+- `POST /api/tweets/retweet` - Retweet/unretweet
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### User Interactions
+- `POST /api/follow` - Follow/unfollow a user
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Authentication
+- `POST /api/auth/sign-up` - User registration
+- `POST /api/auth/sign-in` - User login
+- `GET /api/auth/session` - Get current session
 
-## Deploy on Vercel
+### File Upload
+- `POST /api/s3/upload` - Upload images to S3
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## What Was Removed
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The following features from the original CodeBreakers app were removed:
+- Event management
+- Quiz system
+- Attendance tracking
+- Task submissions
+- Support ticket system
+- Announcements
+- Admin dashboard (kept basic admin auth)
+- Profile completion workflows
+- Registration/payment flows
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Database**: PostgreSQL + Prisma ORM
+- **Authentication**: Better Auth
+- **Styling**: Tailwind CSS
+- **UI Components**: Radix UI + shadcn/ui
+- **File Storage**: AWS S3
+- **Animations**: Framer Motion
+
+## Next Steps
+
+To fully complete the Twitter clone, consider adding:
+- [ ] User profile pages with tweet history
+- [ ] Reply/comment functionality UI
+- [ ] Image upload in tweet composer
+- [ ] Notifications system
+- [ ] Direct messages
+- [ ] Tweet editing and deletion UI
+- [ ] Search functionality
+- [ ] Hashtag support
+- [ ] User mentions (@username)
+- [ ] Bookmarks
+- [ ] Dark/light mode toggle (infrastructure exists)
+- [ ] Mobile responsiveness improvements
+- [ ] Infinite scroll for feed
+- [ ] Tweet analytics
+
+## License
+
+This project is for educational purposes.
+
