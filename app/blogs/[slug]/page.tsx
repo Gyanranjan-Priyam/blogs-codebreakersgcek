@@ -1,11 +1,48 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import BlogDetailClient from "./BlogDetailClient";
+import type { Metadata } from "next";
 
 interface PageProps {
   params: Promise<{
     slug: string;
   }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const blog = await getBlog(slug);
+
+  if (!blog) {
+    return {
+      title: "Blog Not Found",
+      description: "The requested blog post could not be found.",
+    };
+  }
+
+  return {
+    title: blog.title,
+    description: blog.shortDescription || `Read ${blog.title} by ${blog.user.name}`,
+    openGraph: {
+      title: blog.title,
+      description: blog.shortDescription || `Read ${blog.title} by ${blog.user.name}`,
+      type: "article",
+      authors: [blog.user.name || "Anonymous"],
+      publishedTime: blog.createdAt.toISOString(),
+      tags: blog.tags,
+      images: blog.thumbnailKey
+        ? [`https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME_IMAGES}.t3.storage.dev/${blog.thumbnailKey}`]
+        : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: blog.title,
+      description: blog.shortDescription || `Read ${blog.title} by ${blog.user.name}`,
+      images: blog.thumbnailKey
+        ? [`https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME_IMAGES}.t3.storage.dev/${blog.thumbnailKey}`]
+        : [],
+    },
+  };
 }
 
 async function getBlog(slug: string) {
@@ -93,6 +130,7 @@ export default async function BlogDetailPage({ params }: PageProps) {
 
   const blogData = {
     id: blog.id,
+    slug: blog.slug,
     authorId: blog.userId,
     title: blog.title,
     thumbnailUrl,

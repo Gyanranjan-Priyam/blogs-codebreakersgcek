@@ -17,6 +17,7 @@ export function ThumbnailUploader({
   className 
 }: ThumbnailUploaderProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageKey, setImageKey] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,6 +59,8 @@ export function ThumbnailUploader({
       const data = await response.json();
       console.log("ThumbnailUploader: Upload response:", data);
       
+      setImageKey(data.key);
+      
       // Call the callback with uploaded image key and URL
       onImageUpload?.(data.key, data.url);
       
@@ -71,8 +74,21 @@ export function ThumbnailUploader({
     }
   };
 
-  const handleRemoveImage = () => {
+  const handleRemoveImage = async () => {
+    if (imageKey) {
+      try {
+        await fetch("/api/s3/delete", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: imageKey }),
+        });
+        toast.success("Image removed");
+      } catch (error) {
+        console.error("Failed to delete image:", error);
+      }
+    }
     setImagePreview(null);
+    setImageKey("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }

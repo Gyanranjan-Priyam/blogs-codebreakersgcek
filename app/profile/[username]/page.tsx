@@ -419,7 +419,7 @@ export default function ProfilePage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => router.push(`/create?edit=${blog.slug}`)}
+                              onClick={() => router.push(`/edit/${blog.slug}`)}
                               className="h-8 px-2"
                             >
                               <Edit className="h-4 w-4" />

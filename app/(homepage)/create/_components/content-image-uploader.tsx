@@ -19,6 +19,7 @@ export function ContentImageUploader({
   className 
 }: ContentImageUploaderProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.url || null);
+  const [imageKey, setImageKey] = useState<string>(initialData?.key || "");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,6 +61,8 @@ export function ContentImageUploader({
       const data = await response.json();
       console.log("ContentImageUploader: Upload response:", data);
       
+      setImageKey(data.key);
+      
       // Call the callback with uploaded image key and URL
       onImageUpload?.(data.key, data.url);
       
@@ -73,8 +76,21 @@ export function ContentImageUploader({
     }
   };
 
-  const handleRemoveImage = () => {
+  const handleRemoveImage = async () => {
+    if (imageKey) {
+      try {
+        await fetch("/api/s3/delete", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: imageKey }),
+        });
+        toast.success("Image removed");
+      } catch (error) {
+        console.error("Failed to delete image:", error);
+      }
+    }
     setImagePreview(null);
+    setImageKey("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }

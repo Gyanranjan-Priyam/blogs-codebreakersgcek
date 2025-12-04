@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { Header } from "@/app/(homepage)/_components/Header";
 import { BlogPreview } from "@/app/(homepage)/create/_components/blog-preview";
-import { Heart, MessageCircle, Send, MoreVertical, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, Send, MoreVertical, Trash2, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -32,6 +32,7 @@ import {
 interface BlogDetailClientProps {
   blog: {
     id: string;
+    slug: string;
     authorId: string;
     title: string;
     thumbnailUrl: string;
@@ -269,6 +270,18 @@ export default function BlogDetailClient({ blog }: BlogDetailClientProps) {
 
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         <div className="max-w-4xl mx-auto">
+          {/* Edit Button for Blog Owner */}
+          {user && user.id === blog.authorId && (
+            <div className="mb-4 flex justify-end">
+              <Link href={`/edit/${blog.slug}`}>
+                <Button variant="outline" size="sm">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Blog
+                </Button>
+              </Link>
+            </div>
+          )}
+
           <BlogPreview
             title={blog.title}
             thumbnail={blog.thumbnailUrl}
