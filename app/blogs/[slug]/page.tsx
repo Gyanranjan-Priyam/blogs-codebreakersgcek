@@ -122,10 +122,12 @@ export default async function BlogDetailPage({ params }: PageProps) {
         };
         break;
       case 'table':
-        componentData[comp.id] = comp.content;
+        // Ensure proper JSON serialization for table data
+        componentData[comp.id] = comp.content ? JSON.parse(JSON.stringify(comp.content)) : null;
         break;
       case 'code':
-        componentData[comp.id] = comp.content;
+        // Ensure proper JSON serialization for code data
+        componentData[comp.id] = comp.content ? JSON.parse(JSON.stringify(comp.content)) : null;
         break;
     }
   });
