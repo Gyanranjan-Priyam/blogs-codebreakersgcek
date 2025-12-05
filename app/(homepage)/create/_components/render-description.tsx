@@ -8,6 +8,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import FontFamily from "@tiptap/extension-font-family";
 import { Color } from "@tiptap/extension-color";
+import HorizontalRule from "@tiptap/extension-horizontal-rule";
 import { FontSize } from "./extensions/font-size";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
@@ -42,6 +43,7 @@ export function RenderDescription({ content, className }: RenderDescriptionProps
         heading: {
           levels: [1, 2, 3, 4, 5, 6],
         },
+        horizontalRule: false, // Disable default to use custom
       }),
       Underline,
       Link.configure({
@@ -62,6 +64,7 @@ export function RenderDescription({ content, className }: RenderDescriptionProps
         types: ["textStyle"],
       }),
       Color,
+      HorizontalRule,
     ],
     content: jsonContent,
     editable: false,

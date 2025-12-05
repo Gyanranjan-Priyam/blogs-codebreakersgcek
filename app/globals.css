@@ -391,3 +391,25 @@
   height: 0;
   pointer-events: none;
 }
+
+/* Horizontal Rule Styling */
+.tiptap hr {
+  border: none;
+  border-top: 3px solid rgba(0, 0, 0, 0.2);
+  margin: 2rem 0;
+}
+
+.dark .tiptap hr {
+  border-top-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Prose styling for horizontal rule in rendered content */
+.prose hr {
+  border: none;
+  border-top: 3px solid rgba(0, 0, 0, 0.2);
+  margin: 2rem 0;
+}
+
+.dark .prose hr {
+  border-top-color: rgba(255, 255, 255, 0.2);
+}

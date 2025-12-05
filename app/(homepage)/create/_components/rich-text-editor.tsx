@@ -9,6 +9,7 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import FontFamily from "@tiptap/extension-font-family";
 import { Color } from "@tiptap/extension-color";
 import Placeholder from "@tiptap/extension-placeholder";
+import HorizontalRule from "@tiptap/extension-horizontal-rule";
 import { FontSize } from "./extensions/font-size";
 import {
   Bold,
@@ -24,6 +25,7 @@ import {
   Redo,
   List,
   ListOrdered,
+  Minus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,6 +81,7 @@ export function RichTextEditor({
         heading: {
           levels: [1, 2, 3, 4, 5, 6],
         },
+        horizontalRule: false, // Disable default to use custom
       }),
       Underline,
       Link.configure({
@@ -99,6 +102,7 @@ export function RichTextEditor({
         types: ["textStyle"],
       }),
       Color,
+      HorizontalRule,
       Placeholder.configure({
         placeholder,
       }),
@@ -261,6 +265,17 @@ export function RichTextEditor({
             tooltip="Numbered List"
           >
             <ListOrdered className="h-4 w-4" />
+          </MenuButton>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          {/* Separator */}
+          <MenuButton
+            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+            isActive={false}
+            tooltip="Horizontal Line"
+          >
+            <Minus className="h-4 w-4" />
           </MenuButton>
 
           <div className="w-px h-6 bg-border mx-1" />
