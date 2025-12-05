@@ -61,7 +61,7 @@ export default function RootLayout({
               </div>
             </LenisProvider>
           </SocketProvider>
-          <Toaster position="top-center" richColors closeButton />
+          <Toaster position="top-right" richColors closeButton />
           <Analytics />
         </ThemeProvider>
       </body>

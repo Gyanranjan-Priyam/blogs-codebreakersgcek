@@ -1,62 +1,103 @@
-"use client";
+import { notFound, redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
+import type { Metadata } from "next";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+interface PageProps {
+  params: Promise<{
+    code: string;
+  }>;
+}
 
-export default function ShortUrlRedirect() {
-  const params = useParams();
-  const router = useRouter();
-  const [error, setError] = useState(false);
-  const code = params?.code as string || "";
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { code } = await params;
 
-  useEffect(() => {
-    const redirect = async () => {
-      if (!code) {
-        setError(true);
-        return;
-      }
+  try {
+    const shortUrl = await prisma.shortUrl.findUnique({
+      where: { shortCode: code },
+    });
 
-      try {
-        const response = await fetch(`/api/short-url?code=${code}`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          window.location.href = data.originalUrl;
-        } else {
-          setError(true);
-        }
-      } catch (error) {
-        console.error("Error redirecting:", error);
-        setError(true);
-      }
+    if (!shortUrl || !shortUrl.blogSlug) {
+      return {
+        title: "Short URL",
+        description: "Redirecting...",
+      };
+    }
+
+    // Fetch the blog to get metadata
+    const blog = await prisma.blog.findFirst({
+      where: { slug: shortUrl.blogSlug },
+      include: {
+        user: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!blog) {
+      return {
+        title: "Short URL",
+        description: "Redirecting...",
+      };
+    }
+
+    return {
+      title: blog.title,
+      description: blog.shortDescription || `Read ${blog.title} by ${blog.user.name}`,
+      openGraph: {
+        title: blog.title,
+        description: blog.shortDescription || `Read ${blog.title} by ${blog.user.name}`,
+        type: "article",
+        authors: [blog.user.name || "Anonymous"],
+        publishedTime: blog.createdAt.toISOString(),
+        tags: blog.tags,
+        images: blog.thumbnailKey
+          ? [`https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME_IMAGES}.t3.storage.dev/${blog.thumbnailKey}`]
+          : [],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: blog.title,
+        description: blog.shortDescription || `Read ${blog.title} by ${blog.user.name}`,
+        images: blog.thumbnailKey
+          ? [`https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME_IMAGES}.t3.storage.dev/${blog.thumbnailKey}`]
+          : [],
+      },
     };
-
-    redirect();
-  }, [code]);
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-destructive">404</h1>
-          <p className="text-xl text-muted-foreground">Short URL not found</p>
-          <button
-            onClick={() => router.push("/")}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-          >
-            Go Home
-          </button>
-        </div>
-      </div>
-    );
+  } catch (error) {
+    console.error("Error fetching metadata:", error);
+    return {
+      title: "Short URL",
+      description: "Redirecting...",
+    };
   }
+}
 
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="text-center space-y-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-        <p className="text-muted-foreground">Redirecting...</p>
-      </div>
-    </div>
-  );
+export default async function ShortUrlRedirect({ params }: PageProps) {
+  const { code } = await params;
+
+  try {
+    const shortUrl = await prisma.shortUrl.findUnique({
+      where: { shortCode: code },
+    });
+
+    if (!shortUrl) {
+      notFound();
+    }
+
+    // Increment click count (non-blocking)
+    prisma.shortUrl
+      .update({
+        where: { shortCode: code },
+        data: { clicks: { increment: 1 } },
+      })
+      .catch((err) => console.error("Failed to update click count:", err));
+
+    // Redirect to the original URL
+    redirect(shortUrl.originalUrl);
+  } catch (error) {
+    console.error("Error redirecting:", error);
+    notFound();
+  }
 }
