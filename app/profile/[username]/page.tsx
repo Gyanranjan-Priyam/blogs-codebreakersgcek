@@ -195,39 +195,12 @@ export default function ProfilePage() {
   const handleShare = async (e: React.MouseEvent, slug: string) => {
     e.preventDefault();
     e.stopPropagation();
-    
     const blogUrl = `${window.location.origin}/blogs/${slug}`;
-    
     try {
-      // Generate short URL
-      const response = await fetch("/api/short-url", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: blogUrl,
-          blogSlug: slug,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        await navigator.clipboard.writeText(data.shortUrl);
-        toast.success("Short link copied to clipboard!");
-      } else {
-        // Fallback to full URL
-        await navigator.clipboard.writeText(blogUrl);
-        toast.success("Blog link copied to clipboard!");
-      }
+      await navigator.clipboard.writeText(blogUrl);
+      toast.success("Blog link copied to clipboard!");
     } catch (error) {
-      // Fallback to full URL on error
-      try {
-        await navigator.clipboard.writeText(blogUrl);
-        toast.success("Blog link copied to clipboard!");
-      } catch {
-        toast.error("Failed to copy link");
-      }
+      toast.error("Failed to copy link");
     }
   };
 

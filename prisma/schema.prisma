@@ -283,17 +283,3 @@ model BlogComment {
   @@index([userId])
   @@map("blog_comment")
 }
-
-model ShortUrl {
-  id          String   @id @default(cuid())
-  shortCode   String   @unique
-  originalUrl String   @db.Text
-  blogSlug    String?
-  clicks      Int      @default(0)
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime?
-
-  @@index([shortCode])
-  @@index([blogSlug])
-  @@map("short_url")
-}
