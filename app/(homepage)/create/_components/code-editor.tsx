@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CodeEditorProps {
@@ -53,6 +53,11 @@ export function CodeEditor({ onChange, initialData }: CodeEditorProps) {
   const [language, setLanguage] = useState(initialData?.language || "javascript");
   const [showLineNumbers, setShowLineNumbers] = useState(initialData?.showLineNumbers ?? true);
   const [fileName, setFileName] = useState(initialData?.fileName || "");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [showScrollButtons, setShowScrollButtons] = useState(false);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
 
   const updateData = (updates: Partial<CodeData>) => {
     const newData: CodeData = {
@@ -71,11 +76,41 @@ export function CodeEditor({ onChange, initialData }: CodeEditorProps) {
 
   const calculateHeight = () => {
     const lineCount = code.split("\n").length;
-    const minHeight = 100; // Minimum height in pixels
-    const lineHeight = 24; // Height per line in pixels (matching leading-6)
-    const padding = 32; // Top and bottom padding (p-4 = 16px * 2)
+    const minHeight = 150;
+    const lineHeight = 24;
+    const padding = 32;
+    const maxHeight = 500;
     const calculatedHeight = lineCount * lineHeight + padding;
-    return Math.max(minHeight, Math.min(calculatedHeight, 600)); // Max 600px
+    
+    return Math.max(minHeight, Math.min(calculatedHeight, maxHeight));
+  };
+
+  const checkScrollButtons = () => {
+    if (containerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+      const needsScroll = scrollHeight > clientHeight;
+      setShowScrollButtons(needsScroll);
+      setCanScrollUp(scrollTop > 0);
+      setCanScrollDown(scrollTop < scrollHeight - clientHeight - 1);
+    }
+  };
+
+  useEffect(() => {
+    checkScrollButtons();
+  }, [code]);
+
+  const scrollUp = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollBy({ top: -100, behavior: 'smooth' });
+      setTimeout(checkScrollButtons, 100);
+    }
+  };
+
+  const scrollDown = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollBy({ top: 100, behavior: 'smooth' });
+      setTimeout(checkScrollButtons, 100);
+    }
   };
 
   const handleLanguageChange = (value: string) => {
@@ -132,28 +167,73 @@ export function CodeEditor({ onChange, initialData }: CodeEditorProps) {
 
       {/* Code Editor */}
       <div className="relative">
-        <textarea
-          value={code}
-          onChange={(e) => handleCodeChange(e.target.value)}
-          placeholder="Enter your code here..."
+        <div 
+          ref={containerRef}
+          className="border border-border rounded-lg bg-muted/50 overflow-auto"
           style={{ height: `${calculateHeight()}px` }}
-          className={cn(
-            "w-full p-4 font-mono text-sm leading-6",
-            "bg-muted/50 border border-border rounded-lg",
-            "focus:outline-none focus:ring-2 focus:ring-ring",
-            "resize-none overflow-auto",
-            showLineNumbers && "pl-12"
-          )}
-          spellCheck={false}
-        />
-        {showLineNumbers && code && (
-          <div className="absolute left-0 top-0 p-4 pr-2 text-sm font-mono text-muted-foreground select-none pointer-events-none">
-            {code.split("\n").map((_, index) => (
-              <div key={index} className="text-right leading-6">
-                {index + 1}
+          onScroll={checkScrollButtons}
+        >
+          <div className="relative" style={{ minHeight: '100%' }}>
+            <textarea
+              ref={textareaRef}
+              value={code}
+              onChange={(e) => handleCodeChange(e.target.value)}
+              placeholder="Enter your code here..."
+              className={cn(
+                "w-full p-4 font-mono text-sm leading-6",
+                "bg-transparent border-0",
+                "focus:outline-none",
+                "resize-none",
+                showLineNumbers && "pl-12"
+              )}
+              style={{ 
+                height: `${Math.max(calculateHeight() - 2, code.split('\n').length * 24 + 32)}px`,
+                minHeight: `${calculateHeight() - 2}px`
+              }}
+              spellCheck={false}
+            />
+            {showLineNumbers && code && (
+              <div className="absolute left-0 top-0 p-4 pr-2 text-sm font-mono text-muted-foreground select-none pointer-events-none leading-6">
+                {code.split("\n").map((_, index) => (
+                  <div key={index} className="text-right">
+                    {index + 1}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
+        </div>
+
+        {/* Scroll Arrow Buttons */}
+        {showScrollButtons && (
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              onClick={scrollUp}
+              disabled={!canScrollUp}
+              className={cn(
+                "absolute right-2 top-2 h-8 w-8 rounded-full shadow-lg z-10",
+                !canScrollUp && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <ChevronUp className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              onClick={scrollDown}
+              disabled={!canScrollDown}
+              className={cn(
+                "absolute right-2 bottom-2 h-8 w-8 rounded-full shadow-lg z-10",
+                !canScrollDown && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </>
         )}
       </div>
 

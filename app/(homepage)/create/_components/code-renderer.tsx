@@ -5,6 +5,9 @@ import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CodeData } from "./code-editor";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useTheme } from "next-themes";
 
 interface CodeRendererProps {
   data: CodeData;
@@ -35,8 +38,34 @@ const LANGUAGE_LABELS: Record<string, string> = {
   plaintext: "Plain Text",
 };
 
+// Map our language codes to Prism language codes
+const PRISM_LANGUAGE_MAP: Record<string, string> = {
+  javascript: "javascript",
+  typescript: "typescript",
+  python: "python",
+  java: "java",
+  cpp: "cpp",
+  c: "c",
+  csharp: "csharp",
+  php: "php",
+  ruby: "ruby",
+  go: "go",
+  rust: "rust",
+  swift: "swift",
+  kotlin: "kotlin",
+  sql: "sql",
+  html: "markup",
+  css: "css",
+  json: "json",
+  yaml: "yaml",
+  markdown: "markdown",
+  bash: "bash",
+  plaintext: "text",
+};
+
 export function CodeRenderer({ data, className }: CodeRendererProps) {
   const [copied, setCopied] = useState(false);
+  const { theme } = useTheme();
   const { code, language = "plaintext", showLineNumbers = true, fileName } = data;
 
   if (!code) {
@@ -53,10 +82,11 @@ export function CodeRenderer({ data, className }: CodeRendererProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const lines = code.split("\n");
+  const prismLanguage = PRISM_LANGUAGE_MAP[language] || "text";
+  const syntaxTheme = theme === "dark" ? oneDark : oneLight;
 
   return (
-    <div className={cn("rounded-lg overflow-hidden border border-border bg-muted/30", className)}>
+    <div className={cn("rounded-lg overflow-hidden border border-border", className)}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border-b border-border">
         <div className="flex items-center gap-3">
@@ -90,30 +120,27 @@ export function CodeRenderer({ data, className }: CodeRendererProps) {
         </Button>
       </div>
 
-      {/* Code Block */}
+      {/* Code Block with Syntax Highlighting */}
       <div className="relative overflow-x-auto">
-        <pre className="p-4 text-sm font-mono leading-6 bg-muted/50">
-          <code className="block">
-            {showLineNumbers ? (
-              <table className="w-full border-collapse">
-                <tbody>
-                  {lines.map((line, index) => (
-                    <tr key={index}>
-                      <td className="pr-4 text-right text-muted-foreground select-none w-12 align-top">
-                        {index + 1}
-                      </td>
-                      <td className="whitespace-pre-wrap break-all">
-                        {line || "\n"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="whitespace-pre-wrap break-all">{code}</div>
-            )}
-          </code>
-        </pre>
+        <SyntaxHighlighter
+          language={prismLanguage}
+          style={syntaxTheme}
+          showLineNumbers={showLineNumbers}
+          customStyle={{
+            margin: 0,
+            borderRadius: 0,
+            background: "transparent",
+            fontSize: "0.875rem",
+            lineHeight: "1.5rem",
+          }}
+          codeTagProps={{
+            style: {
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+            },
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
       </div>
     </div>
   );
