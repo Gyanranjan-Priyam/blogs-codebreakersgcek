@@ -6,13 +6,14 @@ import { TableRenderer } from "./table-renderer";
 import { CodeRenderer } from "./code-renderer";
 import Image from "next/image";
 import Link from "next/link";
-import { Volume2, VolumeX } from "lucide-react";
+import { Volume2, VolumeX, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Heading {
   id: string;
   text: string;
   level: number;
+  children?: Heading[];
 }
 
 interface ComponentInstance {
@@ -49,13 +50,42 @@ export function BlogPreview({
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [activeHeadingId, setActiveHeadingId] = useState<string>("");
   const [highlightedHeadingId, setHighlightedHeadingId] = useState<string>("");
+  const [collapsedHeadings, setCollapsedHeadings] = useState<Set<string>>(new Set());
   const contentRef = useRef<HTMLDivElement>(null);
+  const headingCounterRef = useRef(0);
+
+  // Build hierarchical structure for headings
+  const buildHeadingHierarchy = (flatHeadings: Heading[]): Heading[] => {
+    const hierarchy: Heading[] = [];
+    const stack: Heading[] = [];
+
+    flatHeadings.forEach((heading) => {
+      const newHeading = { ...heading, children: [] };
+
+      while (stack.length > 0 && stack[stack.length - 1].level >= newHeading.level) {
+        stack.pop();
+      }
+
+      if (stack.length === 0) {
+        hierarchy.push(newHeading);
+      } else {
+        const parent = stack[stack.length - 1];
+        if (!parent.children) parent.children = [];
+        parent.children.push(newHeading);
+      }
+
+      stack.push(newHeading);
+    });
+
+    return hierarchy;
+  };
 
   // Extract headings from components
   useEffect(() => {
+    headingCounterRef.current = 0;
     const extractedHeadings: Heading[] = [];
     
-    components.forEach((component, index) => {
+    components.forEach((component) => {
       const data = componentData[component.id];
       
       if (component.type === "richtext" && data) {
@@ -67,7 +97,7 @@ export function BlogPreview({
             if (node.type === "heading" && node.content) {
               const text = node.content.map((n: any) => n.text || "").join("");
               if (text.trim()) {
-                const id = `heading-${index}-${extractedHeadings.length}`;
+                const id = `heading-${headingCounterRef.current++}`;
                 extractedHeadings.push({
                   id,
                   text: text.trim(),
@@ -88,65 +118,127 @@ export function BlogPreview({
       }
     });
     
-    setHeadings(extractedHeadings);
+    const hierarchicalHeadings = buildHeadingHierarchy(extractedHeadings);
+    setHeadings(hierarchicalHeadings);
   }, [components, componentData]);
 
   // Track active heading on scroll
   useEffect(() => {
-    if (typeof window === "undefined" || headings.length === 0) return;
+    if (typeof window === "undefined") return;
+
+    // Get all heading IDs in flat structure
+    const getAllHeadingIds = (headingList: Heading[]): string[] => {
+      const ids: string[] = [];
+      headingList.forEach(h => {
+        ids.push(h.id);
+        if (h.children) {
+          ids.push(...getAllHeadingIds(h.children));
+        }
+      });
+      return ids;
+    };
+
+    const allHeadingIds = getAllHeadingIds(headings);
+    if (allHeadingIds.length === 0) return;
 
     const handleScroll = () => {
-      const headingElements = headings.map(h => document.getElementById(h.id)).filter(Boolean);
+      const headingElements = allHeadingIds
+        .map(id => ({ id, element: document.getElementById(id) }))
+        .filter(item => item.element !== null);
       
       if (headingElements.length === 0) return;
 
-      const scrollPosition = window.scrollY + 100; // Offset for better UX
+      const scrollPosition = window.scrollY + 150;
       
       for (let i = headingElements.length - 1; i >= 0; i--) {
-        const element = headingElements[i];
+        const { id, element } = headingElements[i];
         if (element && element.offsetTop <= scrollPosition) {
-          setActiveHeadingId(headings[i].id);
+          setActiveHeadingId(id);
           return;
         }
       }
       
-      setActiveHeadingId(headings[0]?.id || "");
+      if (headingElements[0]) {
+        setActiveHeadingId(headingElements[0].id);
+      }
     };
 
-    window.addEventListener("scroll", handleScroll);
-    handleScroll(); // Initial check
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    // Delay initial check to ensure DOM is ready
+    const timer = setTimeout(handleScroll, 100);
     
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      clearTimeout(timer);
+    };
   }, [headings]);
 
   // Add IDs to headings in the rendered content
   useEffect(() => {
     if (!contentRef.current) return;
 
-    const allHeadings = contentRef.current.querySelectorAll("h1, h2, h3, h4, h5, h6");
-    allHeadings.forEach((heading, index) => {
-      const matchingHeading = headings.find((h) => 
-        h.text === heading.textContent?.trim()
-      );
-      if (matchingHeading) {
-        heading.id = matchingHeading.id;
-      }
-    });
-  }, [headings, components]);
+    // Wait for content to render
+    const timer = setTimeout(() => {
+      if (!contentRef.current) return;
+
+      const allHeadings = contentRef.current.querySelectorAll("h1, h2, h3, h4, h5, h6");
+      
+      // Get all heading IDs in order
+      const getAllHeadingsFlat = (headingList: Heading[]): Heading[] => {
+        const flat: Heading[] = [];
+        headingList.forEach(h => {
+          flat.push(h);
+          if (h.children) {
+            flat.push(...getAllHeadingsFlat(h.children));
+          }
+        });
+        return flat;
+      };
+
+      const flatHeadings = getAllHeadingsFlat(headings);
+      let headingIndex = 0;
+
+      allHeadings.forEach((element) => {
+        const text = element.textContent?.trim();
+        if (text && headingIndex < flatHeadings.length) {
+          const heading = flatHeadings[headingIndex];
+          if (heading.text === text) {
+            element.id = heading.id;
+            element.setAttribute('data-heading-id', heading.id);
+            headingIndex++;
+          }
+        }
+      });
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [headings, components, componentData]);
 
   const scrollToHeading = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      const yOffset = -80; // Offset for fixed header
+      const yOffset = -100;
       const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
       window.scrollTo({ top: y, behavior: "smooth" });
       
-      // Highlight the heading for 2 seconds
       setHighlightedHeadingId(id);
       setTimeout(() => {
         setHighlightedHeadingId("");
-      }, 2000);
+      }, 2500);
     }
+  };
+
+  const toggleCollapse = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCollapsedHeadings(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   // Add highlight effect to clicked heading
@@ -155,28 +247,61 @@ export function BlogPreview({
     
     const element = document.getElementById(highlightedHeadingId);
     if (element) {
-      // Apply marker-style highlighting
-      element.style.background = "linear-gradient(180deg, transparent 50%, rgba(var(--primary-rgb, 99, 102, 241), 0.3) 50%)";
-      element.style.transition = "all 0.3s ease";
-      element.style.backgroundSize = "100% 200%";
-      element.style.backgroundPosition = "0 0";
+      const originalBg = element.style.background;
+      element.style.background = "linear-gradient(180deg, transparent 60%, rgba(59, 130, 246, 0.4) 60%)";
+      element.style.transition = "background 0.3s ease";
       
-      // Animate the highlight
       setTimeout(() => {
-        element.style.backgroundPosition = "0 100%";
-      }, 50);
-      
-      // Remove highlight after 2 seconds
-      setTimeout(() => {
-        element.style.backgroundPosition = "0 0";
-        setTimeout(() => {
-          element.style.background = "";
-          element.style.backgroundSize = "";
-          element.style.backgroundPosition = "";
-        }, 300);
-      }, 2000);
+        element.style.background = originalBg;
+      }, 2500);
     }
   }, [highlightedHeadingId]);
+
+  // Render TOC items recursively
+  const renderTOCItem = (heading: Heading, depth: number = 0) => {
+    const hasChildren = heading.children && heading.children.length > 0;
+    const isCollapsed = collapsedHeadings.has(heading.id);
+    const isActive = activeHeadingId === heading.id;
+
+    return (
+      <li key={heading.id}>
+        <div className="flex items-start gap-1">
+          {hasChildren && (
+            <button
+              onClick={(e) => toggleCollapse(heading.id, e)}
+              className="shrink-0 mt-1 cursor-pointer hover:text-primary transition-colors"
+              aria-label={isCollapsed ? "Expand" : "Collapse"}
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
+              )}
+            </button>
+          )}
+          <button
+            onClick={() => scrollToHeading(heading.id)}
+            className={`
+              text-left flex-1 text-sm transition-all cursor-pointer py-1 px-2 rounded
+              ${!hasChildren ? 'ml-4' : ''}
+              ${isActive 
+                ? "text-primary font-medium bg-primary/10 border-l-2 border-primary pl-2" 
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              }
+              ${heading.level === 1 ? "font-semibold" : ""}
+            `}
+          >
+            {heading.text}
+          </button>
+        </div>
+        {hasChildren && !isCollapsed && (
+          <ul className="ml-3 mt-1 space-y-1 border-l border-border/50 pl-2">
+            {heading.children!.map(child => renderTOCItem(child, depth + 1))}
+          </ul>
+        )}
+      </li>
+    );
+  };
 
   const extractTextFromComponents = () => {
     let fullText = `${title}. ${shortDescription || ""}. `;
@@ -319,34 +444,27 @@ export function BlogPreview({
     <div className="relative">
       {/* Table of Contents - Desktop Only */}
       {headings.length > 0 && (
-        <aside className="hidden xl:block fixed left-8 top-32 w-80 max-h-[calc(100vh-200px)]">
-          <div className="bg-card border border-border rounded-lg p-4 shadow-sm h-full flex flex-col">
-            <h3 className="font-semibold text-sm mb-3 text-foreground shrink-0">Table of Contents</h3>
-            <nav className="overflow-y-auto flex-1 pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
-              <ul className="space-y-2">
-                {headings.map((heading) => (
-                  <li key={heading.id}>
-                    <button
-                      onClick={() => scrollToHeading(heading.id)}
-                      className={`
-                        text-left w-full text-sm transition-all cursor-pointer
-                        ${activeHeadingId === heading.id 
-                          ? "text-primary font-medium border-l-2 border-primary pl-3" 
-                          : "text-muted-foreground hover:text-foreground pl-3 border-l-2 border-transparent"
-                        }
-                        ${heading.level === 1 ? "font-semibold" : ""}
-                        ${heading.level === 2 ? "pl-3" : ""}
-                        ${heading.level === 3 ? "pl-5" : ""}
-                        ${heading.level >= 4 ? "pl-7 text-xs" : ""}
-                      `}
-                      style={{
-                        paddingLeft: `${(heading.level - 1) * 12 + 12}px`,
-                      }}
-                    >
-                      {heading.text}
-                    </button>
-                  </li>
-                ))}
+        <aside className="hidden xl:block fixed left-8 top-32 w-80 z-10">
+          <div 
+            className="bg-card border border-border rounded-lg p-4 shadow-sm max-h-96 flex flex-col"
+            onWheel={(e) => {
+              const target = e.currentTarget.querySelector('nav');
+              if (target) {
+                const { scrollTop, scrollHeight, clientHeight } = target;
+                const isAtTop = scrollTop === 0;
+                const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+                
+                if ((e.deltaY < 0 && isAtTop) || (e.deltaY > 0 && isAtBottom)) {
+                  return; // Allow page scroll when at boundaries
+                }
+                e.stopPropagation();
+              }
+            }}
+          >
+            <h3 className="font-semibold text-base mb-3 text-foreground shrink-0">On This Page</h3>
+            <nav className="overflow-y-auto flex-1 pr-2 space-y-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent hover:scrollbar-thumb-primary/40">
+              <ul className="space-y-1">
+                {headings.map(heading => renderTOCItem(heading))}
               </ul>
             </nav>
           </div>
