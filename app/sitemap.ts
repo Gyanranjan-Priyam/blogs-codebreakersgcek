@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/db'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yourdomain.com'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://blogs.codebreakersgcek.tech'
 
   // Get all published blogs
   const blogs = await prisma.blog.findMany({

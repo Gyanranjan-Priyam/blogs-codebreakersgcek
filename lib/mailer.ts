@@ -126,7 +126,7 @@ const generateVerificationEmailHTML = (verificationCode: string) => {
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            font-family: 'Poppins', sans-serif;
             background-color: #f6f8fa;
             padding: 40px 20px;
             color: #24292f;
@@ -601,7 +601,7 @@ const generateAnnouncementEmailHTML = ({
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            font-family: 'Poppins', sans-serif;
             background-color: #f6f8fa;
             padding: 40px 20px;
             color: #24292f;

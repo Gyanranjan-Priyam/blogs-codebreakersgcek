@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Source_Code_Pro } from "next/font/google";
+import { Poppins, Source_Code_Pro } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import LenisProvider from "@/components/providers/lenis-provider";
@@ -8,6 +8,11 @@ import { ThemeProvider } from "next-themes"
 import { SocketProvider } from "@/components/providers/socket-provider";
 import Footer from "@/components/Footer";
 
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-poppins",
+})
 
 const sourceCodePro = Source_Code_Pro({
   subsets: ["latin"],
@@ -48,7 +53,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={` ${sourceCodePro.variable} antialiased`}
+        className={`${poppins.variable} ${sourceCodePro.variable} font-sans antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <SocketProvider>
