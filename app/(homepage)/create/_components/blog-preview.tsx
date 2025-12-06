@@ -52,6 +52,7 @@ export function BlogPreview({
   const [highlightedHeadingId, setHighlightedHeadingId] = useState<string>("");
   const [collapsedHeadings, setCollapsedHeadings] = useState<Set<string>>(new Set());
   const contentRef = useRef<HTMLDivElement>(null);
+  const tocNavRef = useRef<HTMLElement>(null);
   const headingCounterRef = useRef(0);
 
   // Build hierarchical structure for headings
@@ -204,6 +205,37 @@ export function BlogPreview({
       timers.forEach(timer => clearTimeout(timer));
     };
   }, [headings]);
+
+  // Auto-scroll table of contents to keep active heading visible
+  useEffect(() => {
+    if (!activeHeadingId || !tocNavRef.current) return;
+
+    // Find the active button in the TOC
+    const activeButton = tocNavRef.current.querySelector(
+      `button[data-heading-id="${activeHeadingId}"]`
+    ) as HTMLElement;
+
+    if (activeButton) {
+      // Scroll the TOC container to keep the active item visible
+      const container = tocNavRef.current;
+      const containerRect = container.getBoundingClientRect();
+      const buttonRect = activeButton.getBoundingClientRect();
+
+      // Check if button is outside the visible area
+      const isAbove = buttonRect.top < containerRect.top;
+      const isBelow = buttonRect.bottom > containerRect.bottom;
+
+      if (isAbove || isBelow) {
+        // Calculate the scroll position to center the active item
+        const scrollTop = activeButton.offsetTop - container.clientHeight / 2 + activeButton.clientHeight / 2;
+        
+        container.scrollTo({
+          top: scrollTop,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [activeHeadingId]);
 
   // Add IDs to headings in the rendered content
   useEffect(() => {
@@ -390,6 +422,7 @@ export function BlogPreview({
           )}
           <button
             onClick={() => scrollToHeading(heading.id)}
+            data-heading-id={heading.id}
             className={`
               text-left flex-1 text-sm transition-all cursor-pointer py-1 px-2 rounded
               ${!hasChildren ? 'ml-4' : ''}
@@ -571,7 +604,10 @@ export function BlogPreview({
             }}
           >
             <h3 className="font-semibold text-base mb-3 text-foreground shrink-0">On This Page</h3>
-            <nav className="overflow-y-auto flex-1 pr-2 space-y-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent hover:scrollbar-thumb-primary/40">
+            <nav 
+              ref={tocNavRef}
+              className="overflow-y-auto flex-1 pr-2 space-y-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent hover:scrollbar-thumb-primary/40"
+            >
               <ul className="space-y-1">
                 {headings.map(heading => renderTOCItem(heading))}
               </ul>
