@@ -319,10 +319,10 @@ export function BlogPreview({
     <div className="relative">
       {/* Table of Contents - Desktop Only */}
       {headings.length > 0 && (
-        <aside className="hidden xl:block fixed left-8 top-32 w-64 max-h-[calc(100vh-200px)] overflow-y-auto">
-          <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
-            <h3 className="font-semibold text-sm mb-3 text-foreground">Table of Contents</h3>
-            <nav>
+        <aside className="hidden xl:block fixed left-8 top-32 w-80 max-h-[calc(100vh-200px)]">
+          <div className="bg-card border border-border rounded-lg p-4 shadow-sm h-full flex flex-col">
+            <h3 className="font-semibold text-sm mb-3 text-foreground shrink-0">Table of Contents</h3>
+            <nav className="overflow-y-auto flex-1 pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
               <ul className="space-y-2">
                 {headings.map((heading) => (
                   <li key={heading.id}>
