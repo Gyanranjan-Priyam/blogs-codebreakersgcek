@@ -74,6 +74,7 @@ export default function BlogDetailClient({ blog }: BlogDetailClientProps) {
   const [likingPost, setLikingPost] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+  const [showComments, setShowComments] = useState(false);
 
   useEffect(() => {
     fetchSession();
@@ -274,7 +275,7 @@ export default function BlogDetailClient({ blog }: BlogDetailClientProps) {
           {user && user.id === blog.authorId && (
             <div className="mb-4 flex justify-end">
               <Link href={`/edit/${blog.slug}`}>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="cursor-pointer">
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Blog
                 </Button>
@@ -303,18 +304,25 @@ export default function BlogDetailClient({ blog }: BlogDetailClientProps) {
                 size="sm"
                 onClick={handleLike}
                 disabled={likingPost}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 cursor-pointer"
               >
                 <Heart className={`h-5 w-5 ${isLiked ? "fill-current" : ""}`} />
                 <span>{likeCount}</span>
               </Button>
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowComments(!showComments)}
+                className="flex items-center gap-2 cursor-pointer"
+              >
                 <MessageCircle className="h-5 w-5" />
                 <span>{comments.length}</span>
-              </div>
+              </Button>
             </div>
 
-            <Separator className="mb-6" />
+            {showComments && (
+              <>
+                <Separator className="mb-6" />
 
             {/* Comment Form */}
             <form onSubmit={handleCommentSubmit} className="mb-6">
@@ -336,6 +344,7 @@ export default function BlogDetailClient({ blog }: BlogDetailClientProps) {
                       type="submit"
                       size="sm"
                       disabled={!user || submittingComment || !commentText.trim()}
+                      className="cursor-pointer"
                     >
                       <Send className="h-4 w-4 mr-2" />
                       {submittingComment ? "Posting..." : "Post Comment"}
@@ -384,7 +393,7 @@ export default function BlogDetailClient({ blog }: BlogDetailClientProps) {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0"
+                                className="h-8 w-8 p-0 cursor-pointer"
                                 disabled={deletingCommentId === comment.id}
                               >
                                 <MoreVertical className="h-4 w-4" />
@@ -393,7 +402,7 @@ export default function BlogDetailClient({ blog }: BlogDetailClientProps) {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 onClick={() => setCommentToDelete(comment.id)}
-                                className="text-destructive focus:text-destructive"
+                                className="text-destructive focus:text-destructive cursor-pointer"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
@@ -408,6 +417,8 @@ export default function BlogDetailClient({ blog }: BlogDetailClientProps) {
                 ))
               )}
             </div>
+              </>
+            )}
           </Card>
         </div>
       </div>
@@ -422,10 +433,10 @@ export default function BlogDetailClient({ blog }: BlogDetailClientProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteComment}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
             >
               Delete
             </AlertDialogAction>
