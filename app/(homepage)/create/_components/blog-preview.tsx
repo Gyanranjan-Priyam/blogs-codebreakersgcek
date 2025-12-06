@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { RenderDescription } from "./render-description";
 import { TableRenderer } from "./table-renderer";
 import { CodeRenderer } from "./code-renderer";
 import Image from "next/image";
 import Link from "next/link";
+import { Volume2, VolumeX } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ComponentInstance {
   id: string;
@@ -36,6 +39,62 @@ export function BlogPreview({
   publishedDate,
 }: BlogPreviewProps) {
   const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const extractTextFromComponents = () => {
+    let fullText = `${title}. ${shortDescription || ""}. `;
+    
+    components.forEach((component) => {
+      const data = componentData[component.id];
+      
+      if (component.type === "richtext" && data) {
+        try {
+          const content = typeof data === "string" ? JSON.parse(data) : data;
+          const extractTextFromNode = (node: any): string => {
+            if (!node) return "";
+            if (typeof node === "string") return node;
+            
+            let text = "";
+            if (node.text) {
+              text += node.text;
+            }
+            if (node.content && Array.isArray(node.content)) {
+              text += node.content.map(extractTextFromNode).join(" ");
+            }
+            return text;
+          };
+          fullText += extractTextFromNode(content) + ". ";
+        } catch (e) {
+          // Skip invalid content
+        }
+      } else if (component.type === "imagetext" && data?.text) {
+        fullText += data.text + ". ";
+      }
+    });
+    
+    return fullText;
+  };
+
+  const toggleTextToSpeech = () => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    } else {
+      const text = extractTextFromComponents();
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
+      
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+      };
+      
+      window.speechSynthesis.speak(utterance);
+      setIsSpeaking(true);
+    }
+  };
 
   const renderPreviewComponent = (component: ComponentInstance) => {
     const data = componentData[component.id];
@@ -169,6 +228,20 @@ export function BlogPreview({
                 })}
               </time>
             )}
+            <span className="text-muted-foreground/60">•</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleTextToSpeech}
+              className="flex items-center gap-1 h-auto p-1 cursor-pointer hover:text-primary"
+              title={isSpeaking ? "Stop reading" : "Read blog aloud"}
+            >
+              {isSpeaking ? (
+                <VolumeX className="h-5 w-5" />
+              ) : (
+                <Volume2 className="h-5 w-5" />
+              )}
+            </Button>
           </div>
         )}
         
