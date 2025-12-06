@@ -141,35 +141,67 @@ export function BlogPreview({
     const allHeadingIds = getAllHeadingIds(headings);
     if (allHeadingIds.length === 0) return;
 
-    const handleScroll = () => {
-      const headingElements = allHeadingIds
-        .map(id => ({ id, element: document.getElementById(id) }))
-        .filter(item => item.element !== null);
-      
-      if (headingElements.length === 0) return;
+    let ticking = false;
 
-      const scrollPosition = window.scrollY + 150;
-      
-      for (let i = headingElements.length - 1; i >= 0; i--) {
-        const { id, element } = headingElements[i];
-        if (element && element.offsetTop <= scrollPosition) {
-          setActiveHeadingId(id);
-          return;
-        }
-      }
-      
-      if (headingElements[0]) {
-        setActiveHeadingId(headingElements[0].id);
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const headingElements = allHeadingIds
+            .map(id => {
+              const element = document.getElementById(id);
+              return { id, element, top: element ? element.getBoundingClientRect().top : 0 };
+            })
+            .filter(item => item.element !== null);
+          
+          if (headingElements.length === 0) {
+            ticking = false;
+            return;
+          }
+
+          // Find the heading that's currently in view
+          // Consider a heading active if it's within the top 30% of the viewport
+          const viewportThreshold = window.innerHeight * 0.3;
+          
+          let activeId = headingElements[0].id;
+          
+          for (let i = 0; i < headingElements.length; i++) {
+            const current = headingElements[i];
+            
+            // If heading is above the threshold, it's the active one
+            if (current.top <= viewportThreshold) {
+              activeId = current.id;
+              
+              // Check if next heading is also above threshold
+              if (i < headingElements.length - 1) {
+                const next = headingElements[i + 1];
+                if (next.top > viewportThreshold) {
+                  // Current is active, next is below threshold
+                  break;
+                }
+              }
+            } else {
+              // Current heading is below threshold, use previous
+              break;
+            }
+          }
+          
+          setActiveHeadingId(activeId);
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    // Delay initial check to ensure DOM is ready
-    const timer = setTimeout(handleScroll, 100);
+    
+    // Multiple checks to ensure DOM is ready and IDs are assigned
+    const timers = [100, 300, 600, 1000].map(delay => 
+      setTimeout(handleScroll, delay)
+    );
     
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      clearTimeout(timer);
+      timers.forEach(timer => clearTimeout(timer));
     };
   }, [headings]);
 
@@ -219,6 +251,10 @@ export function BlogPreview({
     if (element) {
       const yOffset = -100;
       const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      
+      // Immediately update active state
+      setActiveHeadingId(id);
+      
       window.scrollTo({ top: y, behavior: "smooth" });
       
       setHighlightedHeadingId(id);
@@ -246,15 +282,88 @@ export function BlogPreview({
     if (!highlightedHeadingId) return;
     
     const element = document.getElementById(highlightedHeadingId);
-    if (element) {
-      const originalBg = element.style.background;
-      element.style.background = "linear-gradient(180deg, transparent 60%, rgba(59, 130, 246, 0.4) 60%)";
-      element.style.transition = "background 0.3s ease";
+    if (!element) return;
+
+    // Store original styles
+    const originalBackground = element.style.background;
+    const originalPosition = element.style.position;
+    const originalZIndex = element.style.zIndex;
+    
+    // Apply base styles for highlighting
+    element.style.position = 'relative';
+    element.style.zIndex = '1';
+    
+    // Get the text content and split into words
+    const textContent = element.textContent || "";
+    const words = textContent.trim().split(/\s+/);
+    
+    // Clear and rebuild with spans
+    const originalHTML = element.innerHTML;
+    element.innerHTML = '';
+    
+    const wordElements: { wrapper: HTMLElement; highlight: HTMLElement }[] = [];
+    
+    words.forEach((word, index) => {
+      const wordSpan = document.createElement('span');
+      wordSpan.textContent = word;
+      wordSpan.style.position = 'relative';
+      wordSpan.style.display = 'inline-block';
+      wordSpan.style.whiteSpace = 'pre';
       
+      // Create the highlight background
+      const highlight = document.createElement('span');
+      highlight.style.position = 'absolute';
+      highlight.style.left = '-2px';
+      highlight.style.right = '-2px';
+      highlight.style.bottom = '-2px';
+      highlight.style.top = '15%';
+      highlight.style.backgroundColor = '#fbbf24';
+      highlight.style.opacity = '0.5';
+      highlight.style.zIndex = '-1';
+      highlight.style.transformOrigin = 'left center';
+      highlight.style.transform = 'scaleX(0)';
+      highlight.style.borderRadius = '3px';
+      
+      wordSpan.appendChild(highlight);
+      element.appendChild(wordSpan);
+      
+      wordElements.push({ wrapper: wordSpan, highlight });
+      
+      // Add space after word (except last word)
+      if (index < words.length - 1) {
+        element.appendChild(document.createTextNode(' '));
+      }
+      
+      // Animate the highlight appearance
       setTimeout(() => {
-        element.style.background = originalBg;
-      }, 2500);
-    }
+        highlight.style.transition = 'transform 120ms cubic-bezier(0.4, 0, 0.2, 1)';
+        requestAnimationFrame(() => {
+          highlight.style.transform = 'scaleX(1)';
+        });
+      }, index * 80);
+    });
+
+    // Start fade out animation after all words are highlighted
+    const fadeOutDelay = words.length * 80 + 1500;
+    const fadeOutTimer = setTimeout(() => {
+      wordElements.forEach(({ highlight }) => {
+        highlight.style.transition = 'opacity 800ms ease-out';
+        highlight.style.opacity = '0';
+      });
+    }, fadeOutDelay);
+
+    // Cleanup and restore original content
+    const cleanupTimer = setTimeout(() => {
+      element.innerHTML = originalHTML;
+      element.style.background = originalBackground;
+      element.style.position = originalPosition;
+      element.style.zIndex = originalZIndex;
+    }, fadeOutDelay + 1000);
+
+    return () => {
+      clearTimeout(fadeOutTimer);
+      clearTimeout(cleanupTimer);
+    };
   }, [highlightedHeadingId]);
 
   // Render TOC items recursively
