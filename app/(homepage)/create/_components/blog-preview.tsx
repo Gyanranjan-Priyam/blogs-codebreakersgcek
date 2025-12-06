@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { RenderDescription } from "./render-description";
 import { TableRenderer } from "./table-renderer";
 import { CodeRenderer } from "./code-renderer";
@@ -8,6 +8,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+interface Heading {
+  id: string;
+  text: string;
+  level: number;
+}
 
 interface ComponentInstance {
   id: string;
@@ -40,6 +46,137 @@ export function BlogPreview({
 }: BlogPreviewProps) {
   const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [headings, setHeadings] = useState<Heading[]>([]);
+  const [activeHeadingId, setActiveHeadingId] = useState<string>("");
+  const [highlightedHeadingId, setHighlightedHeadingId] = useState<string>("");
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Extract headings from components
+  useEffect(() => {
+    const extractedHeadings: Heading[] = [];
+    
+    components.forEach((component, index) => {
+      const data = componentData[component.id];
+      
+      if (component.type === "richtext" && data) {
+        try {
+          const content = typeof data === "string" ? JSON.parse(data) : data;
+          const extractHeadingsFromNode = (node: any) => {
+            if (!node) return;
+            
+            if (node.type === "heading" && node.content) {
+              const text = node.content.map((n: any) => n.text || "").join("");
+              if (text.trim()) {
+                const id = `heading-${index}-${extractedHeadings.length}`;
+                extractedHeadings.push({
+                  id,
+                  text: text.trim(),
+                  level: node.attrs?.level || 1,
+                });
+              }
+            }
+            
+            if (node.content && Array.isArray(node.content)) {
+              node.content.forEach(extractHeadingsFromNode);
+            }
+          };
+          
+          extractHeadingsFromNode(content);
+        } catch (e) {
+          // Skip invalid content
+        }
+      }
+    });
+    
+    setHeadings(extractedHeadings);
+  }, [components, componentData]);
+
+  // Track active heading on scroll
+  useEffect(() => {
+    if (typeof window === "undefined" || headings.length === 0) return;
+
+    const handleScroll = () => {
+      const headingElements = headings.map(h => document.getElementById(h.id)).filter(Boolean);
+      
+      if (headingElements.length === 0) return;
+
+      const scrollPosition = window.scrollY + 100; // Offset for better UX
+      
+      for (let i = headingElements.length - 1; i >= 0; i--) {
+        const element = headingElements[i];
+        if (element && element.offsetTop <= scrollPosition) {
+          setActiveHeadingId(headings[i].id);
+          return;
+        }
+      }
+      
+      setActiveHeadingId(headings[0]?.id || "");
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll(); // Initial check
+    
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [headings]);
+
+  // Add IDs to headings in the rendered content
+  useEffect(() => {
+    if (!contentRef.current) return;
+
+    const allHeadings = contentRef.current.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    allHeadings.forEach((heading, index) => {
+      const matchingHeading = headings.find((h) => 
+        h.text === heading.textContent?.trim()
+      );
+      if (matchingHeading) {
+        heading.id = matchingHeading.id;
+      }
+    });
+  }, [headings, components]);
+
+  const scrollToHeading = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      const yOffset = -80; // Offset for fixed header
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+      
+      // Highlight the heading for 2 seconds
+      setHighlightedHeadingId(id);
+      setTimeout(() => {
+        setHighlightedHeadingId("");
+      }, 2000);
+    }
+  };
+
+  // Add highlight effect to clicked heading
+  useEffect(() => {
+    if (!highlightedHeadingId) return;
+    
+    const element = document.getElementById(highlightedHeadingId);
+    if (element) {
+      // Apply marker-style highlighting
+      element.style.background = "linear-gradient(180deg, transparent 50%, rgba(var(--primary-rgb, 99, 102, 241), 0.3) 50%)";
+      element.style.transition = "all 0.3s ease";
+      element.style.backgroundSize = "100% 200%";
+      element.style.backgroundPosition = "0 0";
+      
+      // Animate the highlight
+      setTimeout(() => {
+        element.style.backgroundPosition = "0 100%";
+      }, 50);
+      
+      // Remove highlight after 2 seconds
+      setTimeout(() => {
+        element.style.backgroundPosition = "0 0";
+        setTimeout(() => {
+          element.style.background = "";
+          element.style.backgroundSize = "";
+          element.style.backgroundPosition = "";
+        }, 300);
+      }, 2000);
+    }
+  }, [highlightedHeadingId]);
 
   const extractTextFromComponents = () => {
     let fullText = `${title}. ${shortDescription || ""}. `;
@@ -179,7 +316,44 @@ export function BlogPreview({
   };
 
   return (
-    <article className="max-w-4xl mx-auto bg-background">
+    <div className="relative">
+      {/* Table of Contents - Desktop Only */}
+      {headings.length > 0 && (
+        <aside className="hidden xl:block fixed left-8 top-32 w-64 max-h-[calc(100vh-200px)] overflow-y-auto">
+          <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
+            <h3 className="font-semibold text-sm mb-3 text-foreground">Table of Contents</h3>
+            <nav>
+              <ul className="space-y-2">
+                {headings.map((heading) => (
+                  <li key={heading.id}>
+                    <button
+                      onClick={() => scrollToHeading(heading.id)}
+                      className={`
+                        text-left w-full text-sm transition-all cursor-pointer
+                        ${activeHeadingId === heading.id 
+                          ? "text-primary font-medium border-l-2 border-primary pl-3" 
+                          : "text-muted-foreground hover:text-foreground pl-3 border-l-2 border-transparent"
+                        }
+                        ${heading.level === 1 ? "font-semibold" : ""}
+                        ${heading.level === 2 ? "pl-3" : ""}
+                        ${heading.level === 3 ? "pl-5" : ""}
+                        ${heading.level >= 4 ? "pl-7 text-xs" : ""}
+                      `}
+                      style={{
+                        paddingLeft: `${(heading.level - 1) * 12 + 12}px`,
+                      }}
+                    >
+                      {heading.text}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+        </aside>
+      )}
+
+      <article className="max-w-4xl mx-auto bg-background" ref={contentRef}>
       {/* Header */}
       <header className="mb-8">
         {thumbnail && (
@@ -274,5 +448,6 @@ export function BlogPreview({
         )}
       </div>
     </article>
+    </div>
   );
 }
