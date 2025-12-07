@@ -586,7 +586,7 @@ export function BlogPreview({
     <div className="relative">
       {/* Table of Contents - Desktop Only */}
       {headings.length > 0 && (
-        <aside className="hidden xl:block fixed left-8 top-32 w-80 z-10">
+        <aside className="hidden xl:block fixed left-4 2xl:left-8 top-32 w-44 2xl:w-65 z-10">
           <div 
             className="bg-card border border-border rounded-lg p-4 shadow-sm max-h-96 flex flex-col"
             onWheel={(e) => {
