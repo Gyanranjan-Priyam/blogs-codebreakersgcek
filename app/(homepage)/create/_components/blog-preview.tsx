@@ -588,7 +588,7 @@ export function BlogPreview({
       {headings.length > 0 && (
         <aside className="hidden xl:block fixed left-4 2xl:left-8 top-32 w-44 2xl:w-65 z-10">
           <div 
-            className="bg-card border border-border rounded-lg p-4 shadow-sm max-h-96 flex flex-col"
+            className="bg-card border border-border rounded-lg p-4 shadow-sm max-h-100 flex flex-col"
             onWheel={(e) => {
               const target = e.currentTarget.querySelector('nav');
               if (target) {
