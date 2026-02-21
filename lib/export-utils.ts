@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as XLSX from 'xlsx';
 
 export interface ExportColumn<T> {
   key: keyof T;
   header: string;
-  formatter?: (value: any) => string | number;
+  formatter?: (value: T[keyof T]) => string | number;
 }
 
 export interface SheetData<T> {
@@ -82,6 +83,7 @@ function applyProfessionalStyling<T>(worksheet: XLSX.WorkSheet, columns: ExportC
 
   // Enhanced column width calculations based on content
   const exportData = data.map(item => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const row: Record<string, any> = {};
     columns.forEach(column => {
       const value = item[column.key];
@@ -132,6 +134,7 @@ export function exportToExcel<T>(
 ) {
   // Transform data based on columns configuration
   const exportData = data.map(item => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const row: Record<string, any> = {};
     columns.forEach(column => {
       const value = item[column.key];
